@@ -5,23 +5,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { useTransactions } from '../hooks/useTransactions';
-import BalanceCard from '../components/BalanceCard';
 import TransactionItem from '../components/TransactionItem';
-import AddTransactionForm from '../components/AddTransactionForm';
 import SimpleBottomSheet from '../components/BottomSheet';
 import Icon from '../components/Icon';
 
-export default function MainScreen() {
-  const { balance, addTransaction, getRecentTransactions } = useTransactions();
-  const [isAddTransactionVisible, setIsAddTransactionVisible] = useState(false);
+export default function TransactionsScreen() {
+  const { transactions } = useTransactions();
+  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
-  const recentTransactions = getRecentTransactions(5);
+  const filteredTransactions = transactions.filter(transaction => {
+    if (filter === 'all') return true;
+    return transaction.type === filter;
+  });
 
-  const handleAddTransaction = (transaction: any) => {
-    addTransaction(transaction);
-    setIsAddTransactionVisible(false);
-  };
+  const sortedTransactions = filteredTransactions.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 
   const handleTransactionPress = (transaction: any) => {
     setSelectedTransaction(transaction);
@@ -45,84 +45,65 @@ export default function MainScreen() {
 
   return (
     <SafeAreaView style={commonStyles.container}>
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={commonStyles.title}>Minhas Economias</Text>
-          <Text style={commonStyles.textSecondary}>
-            Controle suas finanças de forma simples
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={commonStyles.title}>Todas as Transações</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
+          onPress={() => setFilter('all')}
+        >
+          <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
+            Todas
           </Text>
-        </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.filterButton, filter === 'income' && styles.filterButtonActive]}
+          onPress={() => setFilter('income')}
+        >
+          <Text style={[styles.filterText, filter === 'income' && styles.filterTextActive]}>
+            Receitas
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.filterButton, filter === 'expense' && styles.filterButtonActive]}
+          onPress={() => setFilter('expense')}
+        >
+          <Text style={[styles.filterText, filter === 'expense' && styles.filterTextActive]}>
+            Despesas
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        <BalanceCard balance={balance} />
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={commonStyles.subtitle}>Transações Recentes</Text>
-            <TouchableOpacity onPress={() => router.push('/transactions')}>
-              <Text style={styles.seeAllText}>Ver todas</Text>
-            </TouchableOpacity>
+      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+        {sortedTransactions.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Icon name="receipt-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyStateText}>Nenhuma transação encontrada</Text>
+            <Text style={styles.emptyStateSubtext}>
+              {filter === 'all' 
+                ? 'Adicione sua primeira transação'
+                : `Nenhuma ${filter === 'income' ? 'receita' : 'despesa'} encontrada`
+              }
+            </Text>
           </View>
-
-          {recentTransactions.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Icon name="receipt-outline" size={48} color={colors.textSecondary} />
-              <Text style={styles.emptyStateText}>Nenhuma transação ainda</Text>
-              <Text style={styles.emptyStateSubtext}>
-                Adicione sua primeira transação tocando no botão +
-              </Text>
-            </View>
-          ) : (
-            recentTransactions.map(transaction => (
-              <TransactionItem
-                key={transaction.id}
-                transaction={transaction}
-                onPress={() => handleTransactionPress(transaction)}
-              />
-            ))
-          )}
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={commonStyles.subtitle}>Ações Rápidas</Text>
-          <View style={styles.quickActions}>
-            <TouchableOpacity 
-              style={[styles.quickActionButton, { backgroundColor: colors.success }]}
-              onPress={() => setIsAddTransactionVisible(true)}
-            >
-              <Icon name="add" size={24} color={colors.background} />
-              <Text style={styles.quickActionText}>Adicionar Receita</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.quickActionButton, { backgroundColor: colors.error }]}
-              onPress={() => setIsAddTransactionVisible(true)}
-            >
-              <Icon name="remove" size={24} color={colors.background} />
-              <Text style={styles.quickActionText}>Adicionar Despesa</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        ) : (
+          sortedTransactions.map(transaction => (
+            <TransactionItem
+              key={transaction.id}
+              transaction={transaction}
+              onPress={() => handleTransactionPress(transaction)}
+            />
+          ))
+        )}
       </ScrollView>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={commonStyles.fab}
-        onPress={() => setIsAddTransactionVisible(true)}
-      >
-        <Icon name="add" size={24} color={colors.background} />
-      </TouchableOpacity>
-
-      {/* Add Transaction Bottom Sheet */}
-      <SimpleBottomSheet
-        isVisible={isAddTransactionVisible}
-        onClose={() => setIsAddTransactionVisible(false)}
-      >
-        <AddTransactionForm
-          onSubmit={handleAddTransaction}
-          onCancel={() => setIsAddTransactionVisible(false)}
-        />
-      </SimpleBottomSheet>
 
       {/* Transaction Details Bottom Sheet */}
       <SimpleBottomSheet
@@ -176,26 +157,47 @@ export default function MainScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  seeAllText: {
+  backButton: {
+    padding: 4,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: colors.backgroundAlt,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  filterText: {
     fontSize: 14,
-    color: colors.primary,
     fontWeight: '600',
+    color: colors.text,
+  },
+  filterTextActive: {
+    color: colors.background,
   },
   emptyState: {
     ...commonStyles.card,
     alignItems: 'center',
     paddingVertical: 40,
+    marginTop: 40,
   },
   emptyStateText: {
     fontSize: 18,
@@ -209,25 +211,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  quickActionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  quickActionText: {
-    color: colors.background,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   transactionDetails: {
     padding: 20,
