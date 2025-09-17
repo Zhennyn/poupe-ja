@@ -1,59 +1,83 @@
+
+import { Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { setupErrorLogging } from '../utils/errorLogger';
 import { Stack, useGlobalSearchParams } from 'expo-router';
 import { SafeAreaProvider, useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { Platform } from 'react-native';
 import { useEffect, useState } from 'react';
-import { setupErrorLogging } from '../utils/errorLogger';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useAuth } from '../hooks/useAuth';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { colors } from '../styles/commonStyles';
 
-const STORAGE_KEY = 'emulated_device';
+const STORAGE_KEY = 'expo-router-emulate';
 
 export default function RootLayout() {
-  const actualInsets = useSafeAreaInsets();
-  const { emulate } = useGlobalSearchParams<{ emulate?: string }>();
-  const [storedEmulate, setStoredEmulate] = useState<string | null>(null);
+  const { emulate } = useGlobalSearchParams();
+  const insets = useSafeAreaInsets();
+  const [isEmulating, setIsEmulating] = useState(false);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    // Set up global error logging
     setupErrorLogging();
+  }, []);
 
-    if (Platform.OS === 'web') {
-      // If there's a new emulate parameter, store it
-      if (emulate) {
-        localStorage.setItem(STORAGE_KEY, emulate);
-        setStoredEmulate(emulate);
-      } else {
-        // If no emulate parameter, try to get from localStorage
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setStoredEmulate(stored);
-        }
-      }
+  useEffect(() => {
+    if (emulate === 'true') {
+      setIsEmulating(true);
     }
   }, [emulate]);
 
-  let insetsToUse = actualInsets;
-
-  if (Platform.OS === 'web') {
-    const simulatedInsets = {
-      ios: { top: 47, bottom: 20, left: 0, right: 0 },
-      android: { top: 40, bottom: 0, left: 0, right: 0 },
-    };
-
-    // Use stored emulate value if available, otherwise use the current emulate parameter
-    const deviceToEmulate = storedEmulate || emulate;
-    insetsToUse = deviceToEmulate ? simulatedInsets[deviceToEmulate as keyof typeof simulatedInsets] || actualInsets : actualInsets;
+  if (loading) {
+    return (
+      <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Carregando...</Text>
+          </View>
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
+    );
   }
 
   return (
     <SafeAreaProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'default',
-            }}
-          />
-        </GestureHandlerRootView>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: colors.background,
+            },
+          }}
+        >
+          {!user ? (
+            <>
+              <Stack.Screen name="auth/login" />
+              <Stack.Screen name="auth/signup" />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="transactions" />
+            </>
+          )}
+        </Stack>
+      </GestureHandlerRootView>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.text,
+  },
+});

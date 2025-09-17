@@ -1,31 +1,28 @@
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import { colors, commonStyles } from '../styles/commonStyles';
-import { useTransactions } from '../hooks/useTransactions';
-import TransactionItem from '../components/TransactionItem';
-import SimpleBottomSheet from '../components/BottomSheet';
 import Icon from '../components/Icon';
+import React, { useState } from 'react';
+import { useTransactions } from '../hooks/useTransactions';
+import { useAuth } from '../hooks/useAuth';
+import TransactionItem from '../components/TransactionItem';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import SimpleBottomSheet from '../components/BottomSheet';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Transaction } from '../types';
 
-export default function TransactionsScreen() {
-  const { transactions } = useTransactions();
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
+const TransactionsScreen = () => {
+  const { user } = useAuth();
+  const { transactions, balance, loading } = useTransactions();
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
-  const filteredTransactions = transactions.filter(transaction => {
-    if (filter === 'all') return true;
-    return transaction.type === filter;
-  });
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Redirect href="/auth/login" />;
+  }
 
-  const sortedTransactions = filteredTransactions.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
-  const handleTransactionPress = (transaction: any) => {
+  const handleTransactionPress = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    console.log('Transaction selected:', transaction);
   };
 
   const formatCurrency = (amount: number) => {
@@ -40,68 +37,69 @@ export default function TransactionsScreen() {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
-    }).format(new Date(date));
+    }).format(date);
   };
 
   return (
-    <SafeAreaView style={commonStyles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.title}>Todas as Transações</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.title}>Transações</Text>
+        <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
-          onPress={() => setFilter('all')}
-        >
-          <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-            Todas
+      {/* Balance Summary */}
+      <View style={styles.balanceSummary}>
+        <View style={styles.balanceItem}>
+          <Text style={styles.balanceLabel}>Receitas</Text>
+          <Text style={[styles.balanceValue, { color: colors.success }]}>
+            {formatCurrency(balance.income)}
           </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'income' && styles.filterButtonActive]}
-          onPress={() => setFilter('income')}
-        >
-          <Text style={[styles.filterText, filter === 'income' && styles.filterTextActive]}>
-            Receitas
+        </View>
+        <View style={styles.balanceItem}>
+          <Text style={styles.balanceLabel}>Despesas</Text>
+          <Text style={[styles.balanceValue, { color: colors.error }]}>
+            {formatCurrency(balance.expenses)}
           </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'expense' && styles.filterButtonActive]}
-          onPress={() => setFilter('expense')}
-        >
-          <Text style={[styles.filterText, filter === 'expense' && styles.filterTextActive]}>
-            Despesas
+        </View>
+        <View style={styles.balanceItem}>
+          <Text style={styles.balanceLabel}>Saldo</Text>
+          <Text style={[
+            styles.balanceValue,
+            { color: balance.total >= 0 ? colors.success : colors.error }
+          ]}>
+            {formatCurrency(balance.total)}
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {sortedTransactions.length === 0 ? (
+      {/* Transactions List */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {loading ? (
           <View style={styles.emptyState}>
-            <Icon name="receipt-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyStateText}>Carregando transações...</Text>
+          </View>
+        ) : transactions.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Icon name="receipt-outline" size={64} color={colors.textSecondary} />
             <Text style={styles.emptyStateText}>Nenhuma transação encontrada</Text>
             <Text style={styles.emptyStateSubtext}>
-              {filter === 'all' 
-                ? 'Adicione sua primeira transação'
-                : `Nenhuma ${filter === 'income' ? 'receita' : 'despesa'} encontrada`
-              }
+              Suas transações aparecerão aqui quando você adicioná-las
             </Text>
           </View>
         ) : (
-          sortedTransactions.map(transaction => (
-            <TransactionItem
-              key={transaction.id}
-              transaction={transaction}
-              onPress={() => handleTransactionPress(transaction)}
-            />
-          ))
+          <View style={styles.transactionsList}>
+            {transactions.map((transaction) => (
+              <TransactionItem
+                key={transaction.id}
+                transaction={transaction}
+                onPress={() => handleTransactionPress(transaction)}
+              />
+            ))}
+          </View>
         )}
       </ScrollView>
 
@@ -113,7 +111,6 @@ export default function TransactionsScreen() {
         {selectedTransaction && (
           <View style={styles.transactionDetails}>
             <Text style={styles.detailsTitle}>Detalhes da Transação</Text>
-            
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Tipo:</Text>
               <Text style={[
@@ -123,7 +120,6 @@ export default function TransactionsScreen() {
                 {selectedTransaction.type === 'income' ? 'Receita' : 'Despesa'}
               </Text>
             </View>
-            
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Valor:</Text>
               <Text style={[
@@ -133,17 +129,16 @@ export default function TransactionsScreen() {
                 {formatCurrency(selectedTransaction.amount)}
               </Text>
             </View>
-            
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Descrição:</Text>
               <Text style={styles.detailValue}>{selectedTransaction.description}</Text>
             </View>
-            
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Categoria:</Text>
-              <Text style={styles.detailValue}>{selectedTransaction.category}</Text>
+              <Text style={styles.detailValue}>
+                {selectedTransaction.category?.name || 'Sem categoria'}
+              </Text>
             </View>
-            
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Data:</Text>
               <Text style={styles.detailValue}>{formatDate(selectedTransaction.date)}</Text>
@@ -153,9 +148,13 @@ export default function TransactionsScreen() {
       </SimpleBottomSheet>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,60 +165,72 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   backButton: {
-    padding: 4,
+    padding: 8,
+    marginLeft: -8,
   },
-  filterContainer: {
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  placeholder: {
+    width: 40,
+  },
+  balanceSummary: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: colors.backgroundAlt,
+    backgroundColor: colors.surface,
+    marginHorizontal: 20,
+    marginVertical: 16,
+    borderRadius: 12,
   },
-  filterButton: {
+  balanceItem: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
     alignItems: 'center',
-    marginHorizontal: 4,
   },
-  filterButtonActive: {
-    backgroundColor: colors.primary,
+  balanceLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
   },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
+  balanceValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  filterTextActive: {
-    color: colors.background,
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  transactionsList: {
+    gap: 8,
+    paddingBottom: 20,
   },
   emptyState: {
-    ...commonStyles.card,
     alignItems: 'center',
-    paddingVertical: 40,
-    marginTop: 40,
+    paddingVertical: 60,
   },
   emptyStateText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
+    color: colors.textSecondary,
     marginTop: 16,
-    marginBottom: 8,
+    fontWeight: '600',
   },
   emptyStateSubtext: {
     fontSize: 14,
     color: colors.textSecondary,
+    marginTop: 8,
     textAlign: 'center',
-    lineHeight: 20,
+    paddingHorizontal: 40,
   },
   transactionDetails: {
     padding: 20,
   },
   detailsTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 24,
+    marginBottom: 20,
     textAlign: 'center',
   },
   detailRow: {
@@ -239,8 +250,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     fontWeight: '600',
-    textAlign: 'right',
     flex: 1,
-    marginLeft: 16,
+    textAlign: 'right',
   },
 });
+
+export default TransactionsScreen;

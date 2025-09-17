@@ -1,9 +1,9 @@
 
-import React from 'react';
+import Icon from './Icon';
+import { Transaction } from '../types';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, commonStyles } from '../styles/commonStyles';
-import { Transaction } from '../types';
-import Icon from './Icon';
+import React from 'react';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -22,47 +22,54 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onPress 
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-    }).format(new Date(date));
+    }).format(date);
   };
 
   const getIconName = () => {
-    switch (transaction.category) {
-      case 'Salário': return 'wallet';
-      case 'Freelance': return 'laptop';
-      case 'Investimentos': return 'trending-up';
-      case 'Alimentação': return 'restaurant';
-      case 'Transporte': return 'car';
-      case 'Moradia': return 'home';
-      case 'Saúde': return 'medical';
-      case 'Educação': return 'school';
-      case 'Lazer': return 'game-controller';
-      default: return transaction.type === 'income' ? 'add-circle' : 'remove-circle';
+    if (transaction.category?.icon) {
+      return transaction.category.icon as keyof typeof Icon;
     }
+    return transaction.type === 'income' ? 'trending-up' : 'trending-down';
+  };
+
+  const getIconColor = () => {
+    if (transaction.category?.color) {
+      return transaction.category.color;
+    }
+    return transaction.type === 'income' ? colors.success : colors.error;
   };
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
-      <View style={styles.iconContainer}>
-        <Icon 
-          name={getIconName()} 
-          size={24} 
-          color={transaction.type === 'income' ? colors.success : colors.error} 
+      <View style={[styles.iconContainer, { backgroundColor: getIconColor() + '20' }]}>
+        <Icon
+          name={getIconName()}
+          size={24}
+          color={getIconColor()}
         />
       </View>
-      
+
       <View style={styles.content}>
-        <Text style={styles.description}>{transaction.description}</Text>
-        <Text style={styles.category}>{transaction.category}</Text>
-      </View>
-      
-      <View style={styles.rightContent}>
-        <Text style={[
-          styles.amount, 
-          { color: transaction.type === 'income' ? colors.success : colors.error }
-        ]}>
-          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-        </Text>
-        <Text style={styles.date}>{formatDate(transaction.date)}</Text>
+        <View style={styles.mainInfo}>
+          <Text style={styles.description} numberOfLines={1}>
+            {transaction.description}
+          </Text>
+          <Text style={[
+            styles.amount,
+            { color: transaction.type === 'income' ? colors.success : colors.error }
+          ]}>
+            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+          </Text>
+        </View>
+
+        <View style={styles.secondaryInfo}>
+          <Text style={styles.category}>
+            {transaction.category?.name || 'Sem categoria'}
+          </Text>
+          <Text style={styles.date}>
+            {formatDate(transaction.date)}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -70,44 +77,54 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onPress 
 
 const styles = StyleSheet.create({
   container: {
-    ...commonStyles.card,
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 4,
-    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.backgroundAlt,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   content: {
     flex: 1,
+  },
+  mainInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   description: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 2,
+    flex: 1,
+    marginRight: 12,
+  },
+  amount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  secondaryInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   category: {
     fontSize: 14,
     color: colors.textSecondary,
   },
-  rightContent: {
-    alignItems: 'flex-end',
-  },
-  amount: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
   date: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.textSecondary,
   },
 });
