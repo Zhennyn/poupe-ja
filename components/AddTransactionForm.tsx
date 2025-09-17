@@ -46,7 +46,7 @@ const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ onSubmit, onCan
 
   const formatCurrency = (value: string) => {
     // Remove non-numeric characters except comma and dot
-    const numericValue = value.replace(/[^\d,\.]/g, '');
+    const numericValue = value.replace(/[^\d,.]/g, '');
     return numericValue;
   };
 

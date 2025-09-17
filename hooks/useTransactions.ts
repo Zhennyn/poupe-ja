@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Transaction, Balance, Category } from '../types';
 import { supabase } from '../app/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -15,23 +15,7 @@ export const useTransactions = () => {
     expenses: 0,
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchTransactions();
-      fetchCategories();
-    } else {
-      setTransactions([]);
-      setCategories([]);
-      setBalance({ total: 0, income: 0, expenses: 0 });
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    calculateBalance();
-  }, [transactions]);
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -68,9 +52,9 @@ export const useTransactions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -95,7 +79,37 @@ export const useTransactions = () => {
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
-  };
+  }, [user]);
+
+  const calculateBalance = useCallback(() => {
+    const income = transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const expenses = transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const total = income - expenses;
+
+    setBalance({ total, income, expenses });
+  }, [transactions]);
+
+  useEffect(() => {
+    if (user) {
+      fetchTransactions();
+      fetchCategories();
+    } else {
+      setTransactions([]);
+      setCategories([]);
+      setBalance({ total: 0, income: 0, expenses: 0 });
+      setLoading(false);
+    }
+  }, [user, fetchTransactions, fetchCategories]);
+
+  useEffect(() => {
+    calculateBalance();
+  }, [transactions, calculateBalance]);
 
   const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
@@ -258,20 +272,6 @@ export const useTransactions = () => {
       console.error('Error adding category:', error);
       return { error: 'Erro inesperado ao adicionar categoria' };
     }
-  };
-
-  const calculateBalance = () => {
-    const income = transactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const expenses = transactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const total = income - expenses;
-
-    setBalance({ total, income, expenses });
   };
 
   const getRecentTransactions = (limit: number = 5) => {
