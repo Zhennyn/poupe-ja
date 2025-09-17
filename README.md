@@ -88,19 +88,6 @@ npm run dev
 yarn dev
 ```
 
-poupe-ja/
-├── app/                 # componentes principais e rotas
-├── assets/images/       # imagens utilizadas
-├── components/          # componentes reutilizáveis
-├── data/                # modelos e fixtures
-├── hooks/               # hooks customizados
-├── supabase/            # configuração do Supabase
-├── styles/              # estilos globais e temas
-├── types/               # definições TypeScript
-├── utils/               # funções auxiliares
-├── public/              # arquivos públicos
-└── ...
-
 📬 Contato
 
 Autor: Matheus Lima Menezes
