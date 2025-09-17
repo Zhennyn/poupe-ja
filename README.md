@@ -27,21 +27,6 @@
 
 ---
 
-## 📑 Índice
-
-- [Sobre o projeto](#sobre-o-projeto)  
-- [Funcionalidades](#funcionalidades)  
-- [Tecnologias](#tecnologias)  
-- [Pré-requisitos](#pré-requisitos)  
-- [Instalação](#instalação)  
-- [Uso](#uso)  
-- [Estrutura do projeto](#estrutura-do-projeto)  
-- [Contribuição](#contribuição)  
-- [Licença](#licença)  
-- [Contato](#contato)  
-
----
-
 ## 📌 Sobre o projeto
 
 O **poupe-ja** é um aplicativo criado para ajudar usuários a **organizar e acompanhar suas finanças pessoais**.  
