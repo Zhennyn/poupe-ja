@@ -4,6 +4,29 @@
 
 ---
 
+
+## Screenshots
+
+### Tela de Login
+![Login](./images/IMG-20250917-WA0055.jpg)
+
+### Tela Inicial / Dashboard
+![Dashboard](./images/IMG-20250917-WA0056.jpg)
+
+### Tela de Criação de Conta
+![Criar Conta](./images/IMG-20250917-WA0057.jpg)
+
+### Tela de Nova Transação - Despesa
+![Nova Transação Despesa](./images/IMG-20250917-WA0058.jpg)
+
+### Tela de Nova Transação - Receita
+![Nova Transação Receita](./images/IMG-20250917-WA0059.jpg)
+
+### Tela de Todas as Transações
+![Todas as Transações](./images/IMG-20250917-WA0060.jpg)
+
+---
+
 ## 📑 Índice
 
 - [Sobre o projeto](#sobre-o-projeto)  
